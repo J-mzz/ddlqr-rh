@@ -1,10 +1,33 @@
+%% 4D example of "Robust Data-Driven Receding-Horizon Control for LQR With Input Constraints"
+%
+% System (only used to generate data and simulate):
+%   x_{k+1} = A*x_k + B*u_k + w_k,  4 states, 4 inputs (B = I),
+%   ||w_k||_inf <= eps,  input constraint ||UU*u_k||_2 <= 1
+%
+% Compares, over num_iter closed-loop steps from x_init:
+%   - model-based input-constrained LQR (Algorithm 1, knows A and B)
+%   - DeePC [11]
+%   - DD-LQR [10]: data-driven LQR without input constraints, designed once
+%     from the initial data
+%   - input-constrained DD-LQR, consistency set fixed
+%   - receding-horizon input-constrained DD-LQR (Algorithm 2), consistency
+%     set refined with every new measurement
+% Case 4 solves the receding-horizon problem with Scherer's P-satz instead
+% of Putinar's, for the comparison in the paper. It is off by default; set
+% run_scherer = true to run it.
+%
+% The results are saved to results/4d and plotted by plot_results.m.
+% The results reported in the paper are in example_4d/; plot them with
+% plot_results('example_4d').
+
 close all; clear; clc
 yalmip('clear')
 rng(1)
 
-%% Compare DD-LQR, Input-Constrained DD-LQR, and RH IC DD-LQR 
-% Algorithm 2 in [4], Algorithm 2, and Algorithm 3, respectively
-% here's the example with 4 states and 4 inputs
+root = fileparts(mfilename('fullpath'));
+addpath(genpath(fullfile(root, 'utils')))
+out_dir = fullfile(root, 'results', '4d');
+if ~exist(out_dir, 'dir'), mkdir(out_dir); end
 
 %% System dynamics and data
 
@@ -24,9 +47,9 @@ A = [ -0.0852   -1.0287    0.2604    0.3119;
 B = eye(4);                % 4 inputs, fully actuated
 
 % control constraints: ||Uu|| <= 1
-UU = 0.5*eye(4); 
+UU = 0.5*eye(4);
 
-% generate auxiliary state-space model 
+% generate auxiliary state-space model
 n = size(A, 1);      % # of state
 m = size(B, 2);      % # of input
 p = size(UU,1);      % # of output
@@ -36,8 +59,8 @@ C = eye(n+m,n);
 D = [zeros(n,m); eye(m)];
 sysd = ss(A,B,C,D,-1);
 
-% LQR 
-Q = sysd.C'*sysd.C;     % here we select Q = I, R = I 
+% LQR
+Q = sysd.C'*sysd.C;     % here we select Q = I, R = I
 R = sysd.D'*sysd.D;
 
 % generate initial measurements
@@ -52,7 +75,7 @@ clear sysd
 
 % relaxation
 order = 1;      % P-satz relaxation order
-relax = 1;      % relaxation order in Remark 2, ref [2]
+relax = 1;      % 1: block-diagonal Gram matrix for sigma_0, 0: full
 partial = 0;    % 1 if know some entries
 
 % yalmip
@@ -62,16 +85,15 @@ opts = sdpsettings('solver', 'mosek', 'verbose', 0);
 num_iter = 10;   % # of iterations
 NOISE = eps*(2*rand(n, num_iter) -1);     % fixed random noise
 
-save_flag = true;   % whether data need to be saved 
+save_flag = true;   % whether data need to be saved
+run_scherer = false;    % also run Case 4 (Scherer's P-satz)
 
-% initial values 
+% initial values
 Tau_init = 1e2;
 x_init = 1.5*[1;-1;-1;1];
 P_init = eye(4);
 
-%
-%% Model-Based
-
+%% Model-based input-constrained LQR (Algorithm 1)
 % initialization
 x_old = x_init;
 P_old = P_init;
@@ -87,7 +109,7 @@ V_log = [];
 % iteration
 for iter = 1:num_iter
     fprintf('iteration = %d\n', iter)
-    
+
     [u, Gamma, P, sol] = MBLQR(A,B,Q,R,UU,x_old,P_old,opts);
     T_md = [T_md, sol.solvertime];
 
@@ -101,23 +123,23 @@ for iter = 1:num_iter
     x_old = A*x_old + B*u + noise;
     P_old = P;
 
-    % log 
+    % log
     X_log = [X_log, x_old];
     U_log = [U_log, u];
     Gamma_log = [Gamma_log, Gamma];
     P_log{iter} = P;
-    
+
 end
 loss_md = trace(Q * (X_log*X_log.')) + trace(R * (U_log*U_log.'))
 
-% save 
+% save
 if save_flag
-    save('mdlqr_ic',"Gamma_log","U_log","X_log","V_log")
+    save(fullfile(out_dir, 'mdlqr_ic'),"Gamma_log","U_log","X_log","V_log")
 end
 
 
-%% Case 0: DeePC
-%
+%% Case 0: DeePC [11]
+
 % initialization
 x_old = x_init;
 
@@ -143,7 +165,7 @@ Yp = Hy(1:p*Tini,:);          Yf = Hy(p*Tini+1:end,:);
 
 for iter = 1:num_iter
     fprintf('iteration = %d\n', iter)
-    
+
     % --- build past window (zero padded before enough data) ---
     if size(U_log,2) < Tini
         need_u = Tini - size(U_log,2);
@@ -192,14 +214,13 @@ for iter = 1:num_iter
 end
 loss_deepc = trace(Q * (X_log*X_log.')) + trace(R * (U_log*U_log.'))
 
-% save 
+% save
 if save_flag
-    save('deepc',"X_log","U_log")
+    save(fullfile(out_dir, 'deepc'),"X_log","U_log")
 end
 
-%
-%% Case 1: DD-LQR, Algorithm 2 in ref [2]
-%
+%% Case 1: DD-LQR [10]
+
 % initialization
 x_old = x_init;
 
@@ -219,26 +240,26 @@ end
 % iteration
 for iter = 1:num_iter
     fprintf('iteration = %d\n', iter)
-    
+
     % update dynamic
     V_log = [V_log, x_old'*inv(P)*x_old];
     u = K*x_old;
     noise = NOISE(:, iter);
     x_old = A*x_old + B*u + noise;
 
-    % log 
+    % log
     X_log = [X_log, x_old];
     U_log = [U_log, u];
 end
 
 loss_lqr = trace(Q * (X_log*X_log.')) + trace(R * (U_log*U_log.'))
 
-% save 
+% save
 if save_flag
-    save('ddlqr',"X_log","U_log","Gamma","V_log")
+    save(fullfile(out_dir, 'ddlqr'),"X_log","U_log","Gamma","V_log")
 end
 
-%% Case 2: Input-constrained DD-LQR, Algorithm 2
+%% Case 2: Input-constrained DD-LQR (consistency set fixed)
 
 % initialization
 Tau_old = Tau_init;
@@ -257,9 +278,9 @@ V_log = [];
 % iteration
 for iter = 1:num_iter
     fprintf('iteration = %d\n', iter)
-    
+
     [K,Gamma,sol,P, Tau, M, W] = ...
-        DDLQR_new(train_data,T,Q,R,eps,order,tol,relax,opts,partial, Tau_old, x_old, P_old, UU);
+        DDLQR_IC(train_data,T,Q,R,eps,order,tol,relax,opts,partial, Tau_old, x_old, P_old, UU);
     T_ic = [T_ic, sol.solvertime];
 
     if sol.problem ~= 0
@@ -274,23 +295,22 @@ for iter = 1:num_iter
     Tau_old = Tau;
     P_old = P;
 
-    % log 
+    % log
     X_log = [X_log, x_old];
     U_log = [U_log, u];
     Tau_log = [Tau_log, Tau];
     Gamma_log = [Gamma_log, Gamma];
     P_log{iter} = P;
-    
+
 end
-% t_ic = toc;
 loss_ic = trace(Q * (X_log*X_log.')) + trace(R * (U_log*U_log.'))
 
-% save 
+% save
 if save_flag
-    save('ddlqr_ic',"Gamma_log","Tau_log","U_log","X_log","data","V_log")
+    save(fullfile(out_dir, 'ddlqr_ic'),"Gamma_log","Tau_log","U_log","X_log","data","V_log")
 end
-%}
-%% Case 3: Receding-Horizon Input-Constrained DD-LQR, Algorithm 3
+
+%% Case 3: Receding-horizon input-constrained DD-LQR (Algorithm 2)
 
 % initialization
 Tau_old = Tau_init;
@@ -306,12 +326,11 @@ P_log = cell(1, num_iter);
 T_rh = [];
 V_log = [];
 
-% tic
 for iter = 1:num_iter
     fprintf('iteration = %d\n', iter)
-    
+
     [K,Gamma,sol,P, Tau, M, W] = ...
-        DDLQR_new(data,T,Q,R,eps,order,tol,relax,opts,partial, Tau_old, x_old, P_old, UU);
+        DDLQR_IC(data,T,Q,R,eps,order,tol,relax,opts,partial, Tau_old, x_old, P_old, UU);
     T_rh = [T_rh, sol.solvertime];
 
     if sol.problem ~= 0
@@ -324,17 +343,18 @@ for iter = 1:num_iter
     Tau_old = Tau;
     P_old = P;
 
+    % add the new measurement to the data
     data.Xm = [data.Xm, x_old];
     data.U = [data.U, u];
 
     noise = NOISE(:, iter);
     x_old = A*x_old + B*u + noise;
-    
+
     data.Xp = [data.Xp, x_old];
     data.Noise = [data.Noise, noise];
     T = T+1;
 
-    % log 
+    % log
     X_log = [X_log, x_old];
     U_log = [U_log, u];
     Tau_log = [Tau_log, Tau];
@@ -342,86 +362,81 @@ for iter = 1:num_iter
     P_log{iter} = P;
 
 end
-% t_rh = toc;
 loss_rh = trace(Q * (X_log*X_log.')) + trace(R * (U_log*U_log.'))
 
 % save
 if save_flag
-    save('ddlqr_rh',"Gamma_log","Tau_log","U_log","X_log","data","V_log")
+    save(fullfile(out_dir, 'ddlqr_rh'),"Gamma_log","Tau_log","U_log","X_log","data","V_log")
 end
 
-%}
-%% Case 4: Scherer Psatz - will out of space (memory)
-%{
-T = T_init;
-data = train_data;
+%% Case 4: Receding-horizon input-constrained DD-LQR with Scherer's P-satz
+% In this example Scherer's P-satz runs out of memory.
+if run_scherer
+    T = T_init;
+    data = train_data;
 
-% initialization
-Tau_old = Tau_init;
-x_old = x_init;
-P_old = P_init;
+    % initialization
+    Tau_old = Tau_init;
+    x_old = x_init;
+    P_old = P_init;
 
-% log
-X_log = x_old;
-U_log = [];
-Gamma_log = [];
-Tau_log = [];
-P_log = cell(1, num_iter);
-T_sch = [];
-V_log = [];
+    % log
+    X_log = x_old;
+    U_log = [];
+    Gamma_log = [];
+    Tau_log = [];
+    P_log = cell(1, num_iter);
+    T_sch = [];
+    V_log = [];
 
-for iter = 1:num_iter
-    fprintf('iteration = %d\n', iter)
+    for iter = 1:num_iter
+        fprintf('iteration = %d\n', iter)
 
-    [K,Gamma,sol,P, Tau, M, W] = ...
-        DDLQR_scherer(data,T,Q,R,eps,order,tol,'d',opts, x_old, P_old, UU);
-    T_sch = [T_sch, sol.solvertime];
+        [K,Gamma,sol,P, Tau, M, W] = ...
+            DDLQR_scherer(data,T,Q,R,eps,order,tol,'d',opts, x_old, P_old, UU);
+        T_sch = [T_sch, sol.solvertime];
 
-    if sol.problem ~= 0
-        warning('solver error with %d', sol.problem)
+        if sol.problem ~= 0
+            warning('solver error with %d', sol.problem)
+        end
+
+        % update dynamic
+        V_log = [V_log, x_old'*inv(P)*x_old];
+        u = K*x_old;
+        Tau_old = Tau;
+        P_old = P;
+
+        data.Xm = [data.Xm, x_old];
+        data.U = [data.U, u];
+
+        noise = NOISE(:, iter);
+        x_old = A*x_old + B*u + noise;
+
+        data.Xp = [data.Xp, x_old];
+        data.Noise = [data.Noise, noise];
+        T = T+1;
+
+        % log 
+        X_log = [X_log, x_old];
+        U_log = [U_log, u];
+        Tau_log = [Tau_log, Tau];
+        Gamma_log = [Gamma_log, Gamma];
+        P_log{iter} = P;
+
     end
+    loss_sch = trace(Q * (X_log*X_log.')) + trace(R * (U_log*U_log.'))
 
-    % update dynamic
-    V_log = [V_log, x_old'*inv(P)*x_old];
-    u = K*x_old;
-    Tau_old = Tau;
-    P_old = P;
-
-    data.Xm = [data.Xm, x_old];
-    data.U = [data.U, u];
-
-    noise = NOISE(:, iter);
-    x_old = A*x_old + B*u + noise;
-    
-    data.Xp = [data.Xp, x_old];
-    data.Noise = [data.Noise, noise];
-    T = T+1;
-
-    % log 
-    X_log = [X_log, x_old];
-    U_log = [U_log, u];
-    Tau_log = [Tau_log, Tau];
-    Gamma_log = [Gamma_log, Gamma];
-    P_log{iter} = P;
-
-end
-loss_sch = trace(Q * (X_log*X_log.')) + trace(R * (U_log*U_log.'))
-
-% save
-if save_flag
-    save('ddlqr_sch',"Gamma_log","Tau_log","U_log","X_log","data","V_log")
+    % save
+    if save_flag
+        save(fullfile(out_dir, 'ddlqr_sch'),"Gamma_log","Tau_log","U_log","X_log","data","V_log")
+    end
 end
 
-%}
 %% Save the workspace
-save('alldata')
-
-%}
-
-
+save(fullfile(out_dir, 'alldata'))
 
 %% Plot
-compare
+plot_results(out_dir)
 
 
 %% Auxiliary functions

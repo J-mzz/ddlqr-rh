@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite the paper below."
+title: "ddlqr-rh: code for Robust data-driven receding-horizon control for LQR with input constraints"
+type: software
+authors:
+  - family-names: Zheng
+    given-names: Jian
+repository-code: "https://github.com/J-mzz/ddlqr-rh"
+license: MIT
+preferred-citation:
+  type: article
+  title: "Robust data-driven receding-horizon control for LQR with input constraints"
+  authors:
+    - family-names: Zheng
+      given-names: Jian
+    - family-names: Sznaier
+      given-names: Mario
+  journal: "IEEE Control Systems Letters"
+  volume: 9
+  start: 2765
+  end: 2770
+  year: 2025
+  publisher:
+    name: IEEE
+  doi: "10.1109/LCSYS.2025.3642051"

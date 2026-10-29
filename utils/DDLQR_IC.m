@@ -1,4 +1,16 @@
-function [K,Gamma,sol, P, Tau, M, W] = DDLQR_new(data,T,Q,R,eps,order,tol,relax,opts,partial, Tau_old, x, P_old, UU)
+function [K,Gamma,sol, P, Tau, M, W] = DDLQR_IC(data,T,Q,R,eps,order,tol,relax,opts,partial, Tau_old, x, P_old, UU)
+% DDLQR_IC  Robust input-constrained data-driven LQR, the SDP of Algorithm 2.
+%   [K, Gamma, sol, P, Tau, M, W] = DDLQR_IC(data, T, Q, R, eps, order, tol,
+%   relax, opts, partial, Tau_old, x, P_old, UU) finds a state feedback
+%   u = K*x for all systems consistent with the first T samples in data
+%   (||w||_inf <= eps) that minimizes the worst-case LQR cost bound Gamma
+%   subject to ||UU*u||_2 <= 1 at the current state x, using a P-satz
+%   relaxation of the given order. With the data refined at every step it
+%   gives the receding-horizon controller of Algorithm 2.
+%
+%   data     struct with fields Xm (x_k), U (u_k), Xp (x_{k+1})
+%   P_old    P from the previous step (P >= P_old is enforced)
+%   Tau_old, partial  kept for interface compatibility (not used)
 % extract data     eq.(17)
 Xm = data.Xm(:,1:T);
 U = data.U(:,1:T);

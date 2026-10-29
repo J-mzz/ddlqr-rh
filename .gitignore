@@ -1,0 +1,10 @@
+# MATLAB autosave and editor backup files
+*.asv
+*.m~
+
+# results written by ddlqr_2d.m and ddlqr_4d.m
+results/
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,14 +1,17 @@
-% clear all; clc
-%% compare consistency set
+function plot_consistency_sets(folder)
+% PLOT_CONSISTENCY_SETS  Consistency sets with and without receding horizon.
+%   plot_consistency_sets(folder) loads the data used by the controller with
+%   a fixed consistency set (ddlqr_ic.mat) and by the receding-horizon
+%   controller (ddlqr_rh.mat) from folder, computes the vertices of both
+%   consistency sets of (A, B), and plots them projected onto the first
+%   three principal components.
 
-% load data and get vertices 
-load ddlqr_ic data
-data_ic = data;
+% load data and get vertices
+S = load(fullfile(folder, 'ddlqr_ic'), 'data');
+data_ic = S.data;
 
-load ddlqr_rh data
-data_rh = data;
-
-clear data
+S = load(fullfile(folder, 'ddlqr_rh'), 'data');
+data_rh = S.data;
 
 % get vertices from data
 vert_ic = getVertices(data_ic);
@@ -18,7 +21,7 @@ vert_rh = getVertices(data_rh);
 % option 1: chosen coordinates
 %        2: 2d pca
 %        3: 3d pca
-opt = 3; 
+opt = 3;
 visualize(vert_ic, vert_rh, opt)
 
 ax = gca;
@@ -26,6 +29,8 @@ ax.Title.FontSize = 16;
 ax.Legend.FontSize = 16;
 
 view(-31.2302, 13.7764)
+
+end
 
 
 %% Local Functions
@@ -171,23 +176,3 @@ e = [eps*ones(size(xi,1),1)+xi; eps*ones(size(xi,1),1)-xi];
 vert = sortrows(con2vert(N,e));
 
 end
-
-
-
- 
-% % --- Use cddmex for vertex enumeration --- too slow
-% polyH.A = N;
-% polyH.B = e;
-% 
-% disp('Enumerating vertices using cddmex ...');
-% polyV = cddmex('extreme', polyH);  % exact conversion H→V
-% 
-% % extract vertices (V field may include rays if unbounded)
-% if isfield(polyV, 'V')
-%     vert = polyV.V;
-% else
-%     error('No vertices found — polyhedron may be empty or unbounded.');
-% end
-% 
-% vert = sortrows(vert);
-% disp(['  → done. Found ', num2str(size(vert,1)), ' vertices.']);

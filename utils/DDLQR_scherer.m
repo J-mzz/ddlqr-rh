@@ -1,4 +1,7 @@
 function [K,Gamma,sol,P,Tau, M, W] = DDLQR_scherer(data,T,Q,R,eps,order,tol,type,opts, x, P_old, UU)
+% DDLQR_SCHERER  Same step as DDLQR_IC, with Scherer's matrix-valued
+%   P-satz (psatz_matrix_refining) instead of Putinar's scalar P-satz.
+%   Used in Case 4 of ddlqr_2d.m and ddlqr_4d.m.
 %% Solve using Scherer P-satz
 % extract data
 Xm = data.Xm(:,1:T);

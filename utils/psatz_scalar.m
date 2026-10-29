@@ -1,9 +1,10 @@
 function [p_out, cons, Gram] = psatz_scalar(X, order, vars, var_n, relax, n, m)
+% PSATZ_SCALAR  Positivstellensatz certificate used by DDLQR_D.
 % X         eq/ineq constraints
 % order     degree of psatz
 % vars      varriables of psatz
 % var_n     # of variables
-% relax     relaxation in Remark 2
+% relax     1: block-diagonal Gram matrix for sigma_0, otherwise full
 % n         # of state
 % m         # of input
 

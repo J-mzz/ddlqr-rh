@@ -1,9 +1,11 @@
 function [p_out, cons, Gram] = psatz_scalar_refining(X, order, vars, var_n, relax, n, m, p)
+% PSATZ_SCALAR_REFINING  Positivstellensatz certificate used by DDLQR_IC
+%   (block structure that includes the input-constraint blocks).
 % X         eq/ineq constraints
 % order     degree of psatz
 % vars      variables of psatz
 % var_n     # of variables
-% relax     relaxation in Remark 2
+% relax     1: block-diagonal Gram matrix for sigma_0, otherwise full
 % n         # of state
 % m         # of input
 
