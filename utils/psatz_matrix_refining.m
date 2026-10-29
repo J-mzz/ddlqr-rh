@@ -1,4 +1,7 @@
 function [p_out, cons, Gram] = psatz_matrix_refining(p, X, order, vars, var_n)
+% PSATZ_MATRIX_REFINING  Scherer's matrix-valued P-satz certificate that
+%   the polynomial matrix p is positive semidefinite on the set given by
+%   the constraints in X (used by DDLQR_SCHERER).
 
 l_p = length(p);    % p in paper
 L_i = length(X.ineq);

@@ -1,4 +1,7 @@
 function [u, Gamma, P, sol] = MBLQR(A,B,Q,R,UU,x,P_old, opts)
+% MBLQR  Model-based input-constrained LQR step (A and B known).
+%   [u, Gamma, P, sol] = MBLQR(A, B, Q, R, UU, x, P_old, opts) returns the
+%   input u = K*x at the current state x with ||UU*u||_2 <= 1.
 
 n = size(B,1);
 m = size(B,2);

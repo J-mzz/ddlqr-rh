@@ -1,4 +1,7 @@
 function noise = generate_noise(n,T,eps,type)
+% GENERATE_NOISE  n x T noise samples.
+%   type = 'inf_norm': uniform in [-eps, eps]; 'gaussian': standard
+%   deviation eps; 'constant': +eps or -eps.
 switch type
     case 'gaussian'                     % eps is the standard deviation
         noise = normrnd(0,eps,[n T]);

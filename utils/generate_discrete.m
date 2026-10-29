@@ -1,4 +1,7 @@
 function data = generate_discrete(sysd,T,eps,type)
+% GENERATE_DISCRETE  T noisy samples of sysd from a random state and inputs.
+%   data = generate_discrete(sysd, T, eps, type) returns data.Xm (x_k),
+%   data.U (u_k), data.Xp (x_{k+1}) and data.Noise (see generate_noise.m).
 % define data
 n = size(sysd.a,1);
 m = size(sysd.b,2);

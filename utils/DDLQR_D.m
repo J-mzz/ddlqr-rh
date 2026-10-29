@@ -1,4 +1,9 @@
 function [K,Gamma,sol,Y] = DDLQR_D(data,T,Q,R,eps,order,tol,relax,opts,partial)
+% DDLQR_D  Robust data-driven LQR without input constraints (DD-LQR baseline).
+%   [K, Gamma, sol, Y] = DDLQR_D(data, T, Q, R, eps, order, tol, relax, opts,
+%   partial) finds u = K*x for all systems consistent with the first T
+%   samples in data (||w||_inf <= eps); Gamma is the worst-case cost bound.
+%   This is the DD-LQR method of Dai and Sznaier, ref. [10] in the paper.
 % extract data     eq.(17)
 Xm = data.Xm(:,1:T);
 U = data.U(:,1:T);

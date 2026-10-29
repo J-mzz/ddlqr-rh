@@ -1,58 +1,58 @@
-close all; clear; %clc
-%% Figures to compare DeePC, DD-LQR, Input-Constrained DD-LQR, and RH IC DD-LQR 
-% DeePC, Algorithm 2 in ref [2], Algorithm 2, and Algorithm 3, respectively
+function plot_results(folder)
+% PLOT_RESULTS  Compare DeePC, DD-LQR, and the input-constrained DD-LQR.
+%   plot_results(folder) loads the results saved by ddlqr_2d.m or
+%   ddlqr_4d.m in folder and plots the trajectories, the control inputs,
+%   the worst-case upper bound, the Lyapunov function, and (2D only) the
+%   consistency sets with and without receding horizon.
+%
+%   plot_results('example_2d') and plot_results('example_4d') plot the
+%   results reported in the paper.
+%
+%   For more than one input, the plotted input is ||UU*u||_2.
 
-load alldata Q R UU
+root = fileparts(mfilename('fullpath'));
+addpath(genpath(fullfile(root, 'utils')))
+if ~isfolder(folder)
+    folder = fullfile(root, folder);   % allow paths relative to the repo
+end
+
+close all
+
+S = load(fullfile(folder, 'alldata'), 'UU');
+UU = S.UU;
 
 %% load data
-load mdlqr_ic
-if size(UU,1) > 1
-    U_log = vecnorm(UU*U_log, 2);
-end
-X_md = X_log;
-U_md = U_log;
-G_md = Gamma_log;
-V_md = V_log;
+S = load(fullfile(folder, 'mdlqr_ic'));
+X_md = S.X_log;
+U_md = input_norm(UU, S.U_log);
+G_md = S.Gamma_log;
+V_md = S.V_log;
 
 t = length(U_md);
 
-load deepc
-if size(UU,1) > 1
-    U_log = vecnorm(UU*U_log, 2);
-end
-X_dpc = X_log;
-U_dpc = U_log;
+S = load(fullfile(folder, 'deepc'));
+X_dpc = S.X_log;
+U_dpc = input_norm(UU, S.U_log);
 
-load ddlqr
-if size(UU,1) > 1
-    U_log = vecnorm(UU*U_log, 2);
-end
-X_lqr = X_log;
-U_lqr = U_log;
-G_lqr = Gamma * ones(1, t);
-V_lqr = V_log;
+S = load(fullfile(folder, 'ddlqr'));
+X_lqr = S.X_log;
+U_lqr = input_norm(UU, S.U_log);
+G_lqr = S.Gamma * ones(1, t);
+V_lqr = S.V_log;
 
-load ddlqr_ic
-if size(UU,1) > 1
-    U_log = vecnorm(UU*U_log, 2);
-end
-X_ic  = X_log;
-U_ic  = U_log;
-T_ic  = Tau_log;
-G_ic  = Gamma_log;
-V_ic  = V_log;
+S = load(fullfile(folder, 'ddlqr_ic'));
+X_ic  = S.X_log;
+U_ic  = input_norm(UU, S.U_log);
+T_ic  = S.Tau_log;
+G_ic  = S.Gamma_log;
+V_ic  = S.V_log;
 
-load ddlqr_rh
-if size(UU,1) > 1
-    U_log = vecnorm(UU*U_log, 2);
-end
-X_rh  = X_log;
-U_rh  = U_log;
-T_rh  = Tau_log;
-G_rh  = Gamma_log;
-V_rh  = V_log;
-
-clear X_log U_log Tau_log Gamma_log Gamma V_log
+S = load(fullfile(folder, 'ddlqr_rh'));
+X_rh  = S.X_log;
+U_rh  = input_norm(UU, S.U_log);
+T_rh  = S.Tau_log;
+G_rh  = S.Gamma_log;
+V_rh  = S.V_log;
 
 
 color1 = [0         0.4470    0.7410];
@@ -70,8 +70,6 @@ hold on
 plot(X_md(1,:),  X_md(2,:),  '*--', 'LineWidth', 1, 'Color', color3)
 plot(X_rh(1,:),  X_rh(2,:),  '*--', 'LineWidth', 1, 'Color', color2)
 plot(X_dpc(1,:), X_dpc(2,:), '*--', 'LineWidth', 1, 'Color', color4)
-% legend('ddlqr','ours-fixed $\mathcal{C}$','ours-updating $\mathcal{C}$',...
-%     'deepc','Location', 'southeast', 'Interpreter', 'latex')
 legend('ddlqr','ours model-based','ours data-driven',...
     'deepc','Location', 'southeast', 'Interpreter', 'latex')
 title('Trajectories')
@@ -91,20 +89,18 @@ ax.YLabel.FontSize = 16;
 ax.Legend.FontSize = 16;
 
 
-%% Figure 1-1: Trajectories coordinate 34
+%% Figure 1-1: Trajectories, coordinates 3 and 4 (4D example)
 
 if size(X_rh, 1) > 2
 
     b = 3;
-    
+
     figure()
     plot(X_lqr(3,:), X_lqr(4,:), '*--', 'LineWidth', 1, 'Color', color1)
     hold on
     plot(X_md(3,:),  X_md(4,:),  '*--', 'LineWidth', 1, 'Color', color3)
     plot(X_rh(3,:),  X_rh(4,:),  '*--', 'LineWidth', 1, 'Color', color2)
     plot(X_dpc(3,:), X_dpc(4,:), '*--', 'LineWidth', 1, 'Color', color4)
-    % legend('ddlqr','ours-fixed $\mathcal{C}$','ours-updating $\mathcal{C}$',...
-    %     'deepc','Location', 'southeast', 'Interpreter', 'latex')
     legend('ddlqr','ours model-based','ours data-driven',...
         'deepc','Location', 'southeast', 'Interpreter', 'latex')
     title('Trajectories')
@@ -115,9 +111,9 @@ if size(X_rh, 1) > 2
     xlim([-b, b])
     ylim([-b, b])
     hold off
-    
+
     ax = gca; % Get the current axes handle
-    
+
     ax.Title.FontSize = 16;
     ax.XLabel.FontSize = 16;
     ax.YLabel.FontSize = 16;
@@ -125,55 +121,7 @@ if size(X_rh, 1) > 2
 
 end
 
-%% Figure 1-2: Trajectories
-%{
-b = 6;
-
-T=t+1;
-figure()
-hold on
-h11 =   plot(1:T, X_lqr(1,:), '*--', 'LineWidth', 1, 'Color', color1);
-h12 =   plot(1:T, X_lqr(2,:), '*-',  'LineWidth', 1, 'Color', color1);
-h13 =   plot(1:T, X_lqr(3,:), '*:',  'LineWidth', 1, 'Color', color1);
-h14 =   plot(1:T, X_lqr(4,:), '*-.', 'LineWidth', 1, 'Color', color1);
-
-h21 =   plot(1:T, X_ic(1,:),  '*--', 'LineWidth', 1, 'Color', color3);
-        plot(1:T, X_ic(2,:),  '*-',  'LineWidth', 1, 'Color', color3);
-        plot(1:T, X_ic(3,:),  '*:',  'LineWidth', 1, 'Color', color3);
-        plot(1:T, X_ic(4,:),  '*-.', 'LineWidth', 1, 'Color', color3);
-
-h31 =   plot(1:T, X_rh(1,:),  '*--', 'LineWidth', 1, 'Color', color2);
-        plot(1:T, X_rh(2,:),  '*-',  'LineWidth', 1, 'Color', color2);
-        plot(1:T, X_rh(3,:),  '*:',  'LineWidth', 1, 'Color', color2);
-        plot(1:T, X_rh(4,:),  '*-.', 'LineWidth', 1, 'Color', color2);
-
-h41 =   plot(1:T, X_dpc(1,:), '*--', 'LineWidth', 1, 'Color', color4);
-        plot(1:T, X_dpc(2,:), '*-',  'LineWidth', 1, 'Color', color4);
-        plot(1:T, X_dpc(3,:), '*:',  'LineWidth', 1, 'Color', color4);
-        plot(1:T, X_dpc(4,:), '*-.', 'LineWidth', 1, 'Color', color4);
-
-
-legend([h11,h21,h31,h41], {'ddlqr','ours-fixed $\mathcal{C}$','ours-updating $\mathcal{C}$','deepc'},...
-    'Location', 'northeast', 'Interpreter', 'latex')
-title('Trajectories')
-xlabel('t')
-ylabel('x')
-grid on
-axis square
-% xlim([-b, b])
-% ylim([-b, b])
-hold off
-
-ax = gca; % Get the current axes handle
-
-ax.Title.FontSize = 16;
-ax.XLabel.FontSize = 16;
-ax.YLabel.FontSize = 16;
-ax.Legend.FontSize = 16;
-
-%}
-
-%% Figure 2: Control 
+%% Figure 2: Control
 
 figure()
 plot(1:t, U_lqr,'*--', 'LineWidth', 1, 'Color', color1)
@@ -181,8 +129,6 @@ hold on
 plot(1:t, U_md, '*--', 'LineWidth', 1, 'Color', color3)
 plot(1:t, U_rh, '*--', 'LineWidth', 1, 'Color', color2)
 plot(1:t, U_dpc,'*--', 'LineWidth', 1, 'Color', color4)
-% legend('ddlqr','ours-fixed $\mathcal{C}$','ours-updating $\mathcal{C}$',...
-%     'deepc', 'Location', 'northeast', 'Interpreter', 'latex')
 legend('ddlqr','ours model-based','ours data-driven',...
     'deepc','Location', 'northeast', 'Interpreter', 'latex')
 title('Control')
@@ -206,8 +152,6 @@ plot(1:t, G_lqr,'*--', 'LineWidth', 1, 'Color', color1)
 plot(1:t, G_md, '*--', 'LineWidth', 1, 'Color', color3)
 plot(1:t, G_rh, '*--', 'LineWidth', 1, 'Color', color2)
 plot(1:t, G_ic, '*--', 'LineWidth', 1, 'Color', color5)
-% legend('ours-fixed $\mathcal{C}$','ours-updating $\mathcal{C}$',...
-%     'ddlqr', 'Location', 'east', 'Interpreter', 'latex')
 legend('ddlqr','ours model-based','ours data-driven',...
     'ours nonRH data-driven','Location', 'east', 'Interpreter', 'latex')
 title('Worst-case upper bound decrease')
@@ -230,9 +174,6 @@ hold on
 plot(1:t, V_lqr,'*--', 'LineWidth', 1, 'Color', color1)
 plot(1:t, V_md, '*--', 'LineWidth', 1, 'Color', color3)
 plot(1:t, V_rh, '*--', 'LineWidth', 1, 'Color', color2)
-% plot(1:t, V_ic, '*--', 'LineWidth', 1, 'Color', color5)
-% legend('ddlqr','ours model-based','ours data-driven',...
-%     'ours nonRH data-driven','Location', 'northeast', 'Interpreter', 'latex')
 legend('ddlqr','ours model-based','ours data-driven',...
     'Location', 'northeast', 'Interpreter', 'latex')
 title('Lyapunov function decrease')
@@ -248,7 +189,19 @@ ax.YLabel.FontSize = 16;
 ax.Legend.FontSize = 16;
 
 
-%% Figure 4: Consistency set shrinkage
+%% Figure 4: Consistency set shrinkage (2D example)
 if size(X_rh,1) <= 2
-    compare_consistency
+    plot_consistency_sets(folder)
+end
+
+end
+
+
+function u = input_norm(UU, U_log)
+% ||UU*u_k||_2 for each step if there is more than one input
+if size(UU,1) > 1
+    u = vecnorm(UU*U_log, 2);
+else
+    u = U_log;
+end
 end

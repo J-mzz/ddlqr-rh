@@ -1,5 +1,8 @@
 function [u_seq, sol] = deepc_solve(Up,Uf,Yp,Yf, ...
         u_ini,y_ini, Q,R, lambda_g,lambda_y, m,p,N, UU, opts)
+% DEEPC_SOLVE  One step of regularized DeePC with ||UU*u_k||_2 <= 1.
+%   [u_seq, sol] = deepc_solve(Up, Uf, Yp, Yf, u_ini, y_ini, Q, R, lambda_g,
+%   lambda_y, m, p, N, UU, opts) returns the predicted input sequence.
 import yalmip.*
 sH  = size(Up,2);
 g   = sdpvar(sH,1);
